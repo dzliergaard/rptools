@@ -1,0 +1,35 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'com.dzlier'
+version = '1.0'
+
+description = """RPTools backend resource classes"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    jcenter()
+    maven { url "http://repo.maven.apache.org/maven2" }
+}
+dependencies {
+    compile project('dzlier-collections')
+    compile group: 'commons-io', name: 'commons-io', version: '2.2'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.3.1'
+    compile group: 'com.google.guava', name: 'guava', version: '18.0'
+    compile group: 'net.java.openjfx.backport', name: 'openjfx-78-backport', version: '1.8.0-ea-b96.1'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
+    compile group: 'org.apache.commons', name: 'commons-math3', version: '3.5'
+    compile group: 'org.projectlombok', name: 'lombok', version: '1.16.6'
+    compile group: 'org.springframework', name: 'spring-context-support', version: '4.2.4.RELEASE'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src'
+        }
+    }
+}
