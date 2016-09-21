@@ -26,22 +26,18 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Abstract class that parses a file from S3 into a tangible/useful object <p> Children are
- * responsible for writing implementation of parsing the .txt file in S3. <p> When {@code parseFile
- * ()} is called, it first checks if a local json file exists for the file name. If the local file
- * exists and is more recent than the s3 file, it parses it and returns. Otherwise, it gets the file
- * from S3, parses it to an object, and saves it in JSON form to a local file to be read next time.
+ * Parses a file into a tangible/useful object.
  *
- * @param <T> The type of data the file is parsed into
+ * @param <T> The type of data the text file is parsed into.
  */
 @CommonsLog
-public abstract class FileParser<T> {
-
-  public static final String PARSE_ERROR = "Error parsing local file %s";
+abstract class FileParser<T> {
+  private static final String PARSE_ERROR = "Error parsing local file %s.";
 
   /**
-   * First looks for the file locally if it has already been downloaded from a previous activation.
-   * If not, will save the file locally so it can use it next time.
+   * Parses /data/[fileName] into an object T.
+   * @param fileName The file to parse.
+   * @return T Parsed contents of file.
    */
   public T parseFile(String fileName) {
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -55,5 +51,10 @@ public abstract class FileParser<T> {
     }
   }
 
+  /**
+   * Given the string contents of a file, parse it into a useful object of type T.
+   * @param data String contents of file.
+   * @return T Parsed contents of string.
+   */
   protected abstract T parseFileData(String data);
 }
