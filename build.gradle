@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'com.google.protobuf'
 apply plugin: 'maven'
 
 group = 'com.dzlier'
@@ -12,24 +13,54 @@ targetCompatibility = 1.8
 repositories {
     jcenter()
     maven { url "http://repo.maven.apache.org/maven2" }
+    maven { url "https://plugins.gradle.org/m2/" }
 }
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+    }
+}
+
 dependencies {
     compile project('dzlier-collections')
     compile group: 'commons-io', name: 'commons-io', version: '2.2'
     compile group: 'com.google.code.gson', name: 'gson', version: '2.3.1'
     compile group: 'com.google.guava', name: 'guava', version: '18.0'
+    compile group: 'com.google.protobuf', name: 'protobuf-java', version: '3.1.0'
     compile group: 'net.java.openjfx.backport', name: 'openjfx-78-backport', version: '1.8.0-ea-b96.1'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.0'
     compile group: 'org.apache.commons', name: 'commons-math3', version: '3.5'
     compile group: 'org.projectlombok', name: 'lombok', version: '1.16.6'
     compile group: 'org.springframework', name: 'spring-context-support', version: '4.2.4.RELEASE'
+    compile group: 'org.springframework.integration', name:'spring-integration-file', version: '4.3.4.RELEASE'
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
-sourceSets {
-    main {
-        java {
-            srcDir 'src'
-        }
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.1.0'
     }
+//    plugins {
+//        // Optional: an artifact spec for a protoc plugin, with "grpc" as
+//        // the identifier, which can be referred to in the "plugins"
+//        // container of the "generateProtoTasks" closure.
+//        grpc {
+//            artifact = 'io.grpc:protoc-gen-grpc-java:1.0.0-pre2'
+//        }
+//    }
+//    generateProtoTasks {
+//        ofSourceSet('main')*.plugins {
+//            // Apply the "grpc" plugin whose spec is defined above, without
+//            // options.  Note the braces cannot be omitted, otherwise the
+//            // plugin will not be added. This is because of the implicit way
+//            // NamedDomainObjectContainer binds the methods.
+//            grpc { }
+//        }
+//    }
 }

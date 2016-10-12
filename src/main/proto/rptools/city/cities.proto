@@ -1,0 +1,77 @@
+/*
+ *  RPToolkit - Tools to assist Role-Playing Game masters and players
+ *  Copyright (C) 2016  Dane Zeke Liergaard
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+syntax = "proto3";
+
+package cities;
+
+option java_package = "com.rptools.city";
+option java_multiple_files = true;
+
+/*
+ * Defines city-related classes in protobuf syntax
+ */
+message City {
+  string name = 1;
+
+  enum Species {
+    Aarakocra = 0;
+    Dragonborn = 1;
+    Dwarf = 2;
+    Elf = 3;
+    Genasi = 4;
+    Gnome = 5;
+    Goliath = 6;
+    Halfling = 7;
+    HalfElf = 8;
+    HalfOrc = 9;
+    Human = 10;
+    Tiefling = 11;
+  }
+  message Ruler {
+    string name = 1;
+    Species species = 2;
+  }
+  Ruler ruler = 2;
+
+  message Population {
+    map<string, int32> people = 1;
+    int32 total = 2;
+    int32 search_mod = 3;
+  }
+  Population population = 3;
+
+  repeated string inns = 4;
+  repeated string guilds = 5;
+}
+
+message Cities {
+  message Guilds {
+    repeated string pat = 1;
+    repeated string group = 2;
+    repeated string noun = 3;
+  }
+  Guilds guilds = 1;
+
+  message Inns {
+    repeated string begPat = 1;
+    repeated string beg = 2;
+    repeated string endPat = 3;
+    repeated string end = 4;
+  }
+  Inns inns = 2;
+}
