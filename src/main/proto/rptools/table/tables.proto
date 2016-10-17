@@ -1,0 +1,40 @@
+/*
+ *  RPToolkit - Tools to assist Role-Playing Game masters and players
+ *  Copyright (C) 2016  Dane Zeke Liergaard
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+syntax = "proto3";
+
+package tables;
+
+import "google/protobuf/struct.proto";
+
+option java_package = "com.rptools.table";
+option java_multiple_files = true;
+
+/**
+ * Represents a table from PH, DMG, or other D&D 5E book.
+ *
+ * Can also be a folder containing a list of child tables.
+ */
+message RPTable {
+  repeated string columns = 1;
+
+  repeated google.protobuf.Struct entries = 2;
+  int32 maxRoll = 3;
+  string name = 4;
+  bool isParent = 5;
+  repeated RPTable tables = 6;
+}

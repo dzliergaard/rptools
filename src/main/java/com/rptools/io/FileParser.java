@@ -19,7 +19,6 @@
 package com.rptools.io;
 
 import lombok.extern.apachecommons.CommonsLog;
-
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
