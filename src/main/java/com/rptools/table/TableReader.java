@@ -1,16 +1,15 @@
 package com.rptools.table;
 
 import com.rptools.io.TableFileParser;
+import java.io.File;
+import java.io.FileFilter;
+import java.util.Collection;
+import java.util.Optional;
 import lombok.Getter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.io.File;
-import java.io.FileFilter;
-import java.util.Collection;
-import java.util.Optional;
 
 @Component
 public class TableReader {
