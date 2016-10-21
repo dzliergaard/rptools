@@ -1,9 +1,11 @@
 package com.rptools.table;
 
+import com.google.common.collect.Lists;
 import com.rptools.io.TableFileParser;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
 import org.apache.commons.io.FileUtils;
@@ -22,26 +24,30 @@ public class TableReader {
   public TableReader(TableFileParser fileParser) {
     this.fileParser = fileParser;
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-    tables = Optional.ofNullable(classLoader.getResource("/data/tables/"))
+    RPTable.Builder builder = RPTable.newBuilder().setIsParent(true);
+    Optional.ofNullable(classLoader.getResource("/data/tables/"))
         .map(FileUtils::toFile)
-        .map(this::readTables)
-        .orElse(null);
+        .ifPresent(file -> readTables(file, builder));
+    tables = builder.build().getTables(0);
   }
 
-  private RPTable readTables(File file) {
+  private void readTables(File file, RPTable.Builder parent) {
     if (file.isDirectory()) {
       Collection<File> files = FileUtils.listFiles(file, new String[]{"json", "txt"}, false);
-      RPTable.Builder builder = RPTable.newBuilder().setName(processName(file)).setIsParent(true);
-      files.stream().sorted((o1, o2) -> o1.getName().compareTo(o2.getName()))
+      RPTable.Builder builder = parent.addTablesBuilder()
+          .setName(processName(file))
+          .setIsParent(true);
+      files.stream()
+          .sorted((f1, f2) -> f1.getName().compareTo(f2.getName()))
           .forEach(found -> builder.addTables(fileParser.parseFile(found.toPath())));
-      for (File dir : file.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY)) {
-        if (dir != file) {
-          builder.addTables(readTables(dir));
-        }
-      }
-      return builder.build();
+      List<File> subdirs = Lists.newArrayList(
+          file.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY));
+      subdirs.stream()
+          .sorted((d1, d2) -> d1.getName().compareTo(d2.getName()))
+          .filter(dir -> !dir.equals(file))
+          .forEach(dir -> readTables(dir, builder));
     } else {
-      return fileParser.parseFile(file.toPath());
+      parent.addTables(fileParser.parseFile(file.toPath()));
     }
   }
 
