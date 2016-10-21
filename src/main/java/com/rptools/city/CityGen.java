@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Random;
 import java.util.TreeMap;
 import lombok.extern.apachecommons.CommonsLog;
@@ -54,12 +55,12 @@ public class CityGen {
     }
 
     City.Population.Builder popBuilder = city.getPopulationBuilder();
-    addPopulation(popBuilder, size, diversity, species);
+    addPopulation(popBuilder, size, diversity, Optional.ofNullable(species).orElse(randSpecies()));
 
     // add 3 races, or sometimes 2 for low-diversity places
     int people = popBuilder.getPeopleMap().size();
-    while (people < 3 && (people < 2 || rand.nextDouble() * .2 < diversity)) {
-      if(addPopulation(popBuilder, size, diversity, species)) {
+    while (people < 3 || (people < 2 && rand.nextDouble() * .2 < diversity)) {
+      if(addPopulation(popBuilder, size, diversity, randSpecies())) {
         people++;
       }
     }
@@ -69,6 +70,11 @@ public class CityGen {
     city.addAllGuilds(generateGuilds(city.getPopulation().getTotal()));
 
     return city.build();
+  }
+
+  private Species randSpecies() {
+    int ind = rand.nextInt(Species.values().length);
+    return Species.values()[ind];
   }
 
   private static boolean addPopulation(City.Population.Builder population, Double size, Double diversity, Species species) {

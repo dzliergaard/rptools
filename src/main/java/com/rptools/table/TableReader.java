@@ -13,25 +13,28 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TableReader {
+
   private final TableFileParser fileParser;
-  @Getter private final RPTable tables;
+  @Getter
+  private final RPTable tables;
 
   @Autowired
   public TableReader(TableFileParser fileParser) {
     this.fileParser = fileParser;
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     tables = Optional.ofNullable(classLoader.getResource("/data/tables/"))
-                     .map(FileUtils::toFile)
-                     .map(this::readTables)
-                     .orElse(null);
+        .map(FileUtils::toFile)
+        .map(this::readTables)
+        .orElse(null);
   }
 
   private RPTable readTables(File file) {
     if (file.isDirectory()) {
       Collection<File> files = FileUtils.listFiles(file, new String[]{"json", "txt"}, false);
       RPTable.Builder builder = RPTable.newBuilder().setName(processName(file)).setIsParent(true);
-      files.forEach(found -> builder.addTables(fileParser.parseFile(found.toPath())));
-      for (File dir : file.listFiles((FileFilter)DirectoryFileFilter.DIRECTORY)) {
+      files.stream().sorted((o1, o2) -> o1.getName().compareTo(o2.getName()))
+          .forEach(found -> builder.addTables(fileParser.parseFile(found.toPath())));
+      for (File dir : file.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY)) {
         if (dir != file) {
           builder.addTables(readTables(dir));
         }
