@@ -28,6 +28,11 @@ option java_multiple_files = true;
  * Represents a table from PH, DMG, or other D&D 5E book.
  *
  * Can also be a folder containing a list of child tables.
+ *
+ * Entries may be simple string or number values, or redirects to roll
+ * on other tables. These entries will be json-formatted Structs with values:
+ *   string table_path
+ *   int32 num_rolls
  */
 message RPTable {
   repeated string columns = 1;
@@ -35,6 +40,5 @@ message RPTable {
   repeated google.protobuf.Struct entries = 2;
   int32 maxRoll = 3;
   string name = 4;
-  bool isParent = 5;
-  repeated RPTable tables = 6;
+  map<string,RPTable> tables = 5;
 }

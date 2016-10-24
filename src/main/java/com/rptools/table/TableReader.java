@@ -24,34 +24,39 @@ public class TableReader {
   public TableReader(TableFileParser fileParser) {
     this.fileParser = fileParser;
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-    RPTable.Builder builder = RPTable.newBuilder().setIsParent(true);
-    Optional.ofNullable(classLoader.getResource("/data/tables/"))
+    tables = Optional.ofNullable(classLoader.getResource("/data/tables/"))
         .map(FileUtils::toFile)
-        .ifPresent(file -> readTables(file, builder));
-    tables = builder.build().getTables(0);
+        .map(this::readTables)
+        .map(tables -> tables.getTablesMap().get("tables"))
+        .orElse(null);
   }
 
-  private void readTables(File file, RPTable.Builder parent) {
+  private RPTable readTables(File file) {
     if (file.isDirectory()) {
-      Collection<File> files = FileUtils.listFiles(file, new String[]{"json", "txt"}, false);
-      RPTable.Builder builder = parent.addTablesBuilder()
-          .setName(processName(file))
-          .setIsParent(true);
+      Collection<File> files = FileUtils
+          .listFiles(file, new String[]{"json", "txt"}, false);
+      RPTable.Builder tables = RPTable.newBuilder().setName(processName(file));
       files.stream()
           .sorted((f1, f2) -> f1.getName().compareTo(f2.getName()))
-          .forEach(found -> builder.addTables(fileParser.parseFile(found.toPath())));
+          .map(File::toPath)
+          .map(fileParser::parseFile)
+          .filter(found -> found != null)
+          .forEach(table -> tables.putTables(table.getName(), table));
       List<File> subdirs = Lists.newArrayList(
           file.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY));
       subdirs.stream()
           .sorted((d1, d2) -> d1.getName().compareTo(d2.getName()))
           .filter(dir -> !dir.equals(file))
-          .forEach(dir -> readTables(dir, builder));
+          .map(this::readTables)
+          .forEach(table -> tables.putTables(table.getName(), table));
+      return tables.build();
     } else {
-      parent.addTables(fileParser.parseFile(file.toPath()));
+      return Optional.of(file.toPath()).map(fileParser::parseFile).orElse(null);
     }
   }
 
   private String processName(File file) {
-    return file.getName().replace(".txt", "").replace(".json", "").replaceAll("^[0-9]*", "");
+    return file.getName().replace(".txt", "").replace(".json", "")
+        .replaceAll("^[0-9]*", "");
   }
 }

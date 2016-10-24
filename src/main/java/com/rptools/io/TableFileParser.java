@@ -21,13 +21,11 @@ package com.rptools.io;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 import com.google.protobuf.util.JsonFormat;
 import com.rptools.table.RPTable;
-import lombok.extern.apachecommons.CommonsLog;
-import org.springframework.stereotype.Component;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -36,29 +34,40 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.apachecommons.CommonsLog;
+import org.springframework.stereotype.Component;
 
 /**
- * Parses text files representing random tables from the DMG into {@code RPTable} objects. See
- * {@code RPTable} for expected table file format.
+ * Parses text files representing random tables from the DMG into {@code
+ * RPTable} objects. See {@code RPTable} for expected table file format.
  */
 @Component
 @CommonsLog
 public class TableFileParser {
+
   private static final Joiner JOINER = Joiner.on("");
-  private static final Pattern ROLL_PATTERN = Pattern.compile("(\\d+)(?:-(\\d+))?");
-  private static final Pattern WORD_BREAK_PATTERN = Pattern.compile("([a-z])([A-Z])");
+  private static final Pattern ROLL_PATTERN = Pattern
+      .compile("(\\d+)(?:-(\\d+))?");
+  private static final Pattern WORD_BREAK_PATTERN = Pattern
+      .compile("([a-z])([A-Z])");
   private static final Splitter SPLITTER = Splitter.on('\t').omitEmptyStrings();
+  private static final Charset UTF_8 = Charset.forName("UTF-8");
   private static final String PARSE_ERROR = "Error parsing local file %s.";
+  private static final String COL_ROLL = "Roll";
+  private static final String COL_WEIGHT = "weight";
+  private static final String EXT_TXT = ".txt";
+  private static final String EXT_JSON = ".json";
 
   private int roll = 1;
 
   /**
-   * Parse file found at path {@param file} into an RPTable object.
-   * See {@link RPTable} for expected table file format.
+   * Parse file found at path {@param file} into an RPTable object. See {@link
+   * RPTable} for expected table file format.
    *
-   * Json files are read directly as a proto3 RPTable message.
-   * Text files must be parsed, have their json equivalent written, then deleted. This is to ease adding future tables
-   * by pasting their text content instead of trying to convert them to json by hand.
+   * Json files are read directly as a proto3 RPTable message. Text files must
+   * be parsed, have their json equivalent written, then deleted. This is to
+   * ease adding future tables by pasting their text content instead of trying
+   * to convert them to json by hand.
    *
    * @param file Input table text file.
    * @return {@link RPTable} created from contents of input file.
@@ -69,7 +78,7 @@ public class TableFileParser {
       List<String> lines = Files.readAllLines(file);
       RPTable.Builder builder = RPTable.newBuilder();
       // We want to keep json files around, and convert text files to json, then delete them.
-      if (file.getFileName().toString().endsWith(".json")) {
+      if (file.getFileName().toString().endsWith(EXT_JSON)) {
         JsonFormat.parser().merge(JOINER.join(lines), builder);
         return builder.build();
       }
@@ -80,8 +89,12 @@ public class TableFileParser {
       builder.addAllColumns(headers);
 
       lines.forEach(line -> parseLine(builder, headers, line));
-      updateResourceFiles(file, builder);
-      return builder.build();
+      // only return a table for .txt files if the json file did not also
+      // already exist to be read separately
+      if (updateResourceFiles(file, builder)) {
+        return builder.build();
+      }
+      return null;
     } catch (IOException e) {
       log.error(String.format(PARSE_ERROR, file.toString()), e);
       return null;
@@ -90,26 +103,35 @@ public class TableFileParser {
 
   /**
    * Save new json file if it doesn't exist. Delete the text file.
+   *
+   * @param file Path to file
+   * @param builder RPTable builder to print to JSON file
+   * @return Boolean: If the .json file already existed and will be parsed
+   * separately
    */
-  private void updateResourceFiles(Path file, RPTable.Builder builder) throws IOException {
-    File json = new File(file.toString().replace(".txt", ".json"));
+  private boolean updateResourceFiles(Path file, RPTable.Builder builder)
+      throws IOException {
+    File json = new File(file.toString().replace(EXT_TXT, EXT_JSON));
     Files.delete(file);
-    if (!json.createNewFile()) {
-      return;
-    }
-    Files.write(json.toPath(), Lists.newArrayList(JsonFormat.printer().print(builder)), Charset.forName("UTF-8"));
+    boolean isNew = json.createNewFile();
+    Files.write(json.toPath(),
+        Lists.newArrayList(JsonFormat.printer().print(builder)), UTF_8);
+    return isNew;
   }
 
   private void setTableName(Path file, RPTable.Builder builder) {
-    String filename = file.getFileName().toString().replace(".txt", "").replaceAll("^[0-9]*", "");
+    String filename = file.getFileName().toString().replace(EXT_TXT, "")
+        .replaceAll("^[0-9]*", "");
     Matcher wordBreak = WORD_BREAK_PATTERN.matcher(filename);
     while (wordBreak.find()) {
-      filename = filename.replace(wordBreak.group(0), wordBreak.group(1) + " " + wordBreak.group(2));
+      filename = filename.replace(wordBreak.group(0),
+          wordBreak.group(1) + " " + wordBreak.group(2));
     }
     builder.setName(filename);
   }
 
-  private void parseLine(RPTable.Builder builder, List<String> columns, String line) {
+  private void parseLine(RPTable.Builder builder, List<String> columns,
+      String line) {
     if (line.isEmpty()) {
       return;
     }
@@ -120,25 +142,64 @@ public class TableFileParser {
       int weight = 1;
       if (matcher.matches()) {
         weight = getEntryWeight(matcher);
-        entryBuilder.putFields("Roll", Value.newBuilder().setStringValue(values.remove(0)).build());
+        entryBuilder.putFields(COL_ROLL, buildField(values.remove(0)));
       } else {
-        entryBuilder.putFields("Roll", Value.newBuilder().setNumberValue(roll).build());
+        entryBuilder.putFields(COL_ROLL, numberValue(roll));
       }
-      entryBuilder.putFields("weight", Value.newBuilder().setNumberValue(weight).build());
+      entryBuilder.putFields(COL_WEIGHT, numberValue(weight));
       roll += weight;
-      builder.setMaxRoll(builder.getMaxRoll() + weight);
-      for (String column : columns) {
-        entryBuilder.putFields(column, Value.newBuilder().setStringValue(values.remove(0)).build());
-      }
+      builder.setMaxRoll(roll);
+      columns.forEach(
+          col -> entryBuilder.putFields(col, buildField(values.remove(0))));
     } catch (IndexOutOfBoundsException e) {
       log.error("Exception processing line: " + line, e);
     }
+  }
+
+  /**
+   * First tries parsing the value as though it were a table-redirect-type
+   * Struct. Otherwise, defaults to the normal value types int -> string.
+   */
+  private Value buildField(String value) {
+    try {
+      Struct.Builder entryStructBuilder = Struct.newBuilder();
+      JsonFormat.parser().merge(value, entryStructBuilder);
+      return structValue(entryStructBuilder);
+    } catch (InvalidProtocolBufferException e) {
+      return numOrStringValue(value);
+    }
+  }
+
+  private Value structValue(Struct.Builder structBuilder) {
+    return Value.newBuilder().setStructValue(structBuilder).build();
+  }
+
+  // First tries to create a number value, defaults to string value if
+  // string is not valid number format
+  private Value numOrStringValue(String value) {
+    try {
+      return numberValue(Integer.parseInt(value));
+    } catch (NumberFormatException nfe) {
+      return stringValue(value);
+    }
+  }
+
+  private Value numberValue(Integer number) {
+    return Value.newBuilder().setNumberValue(number).build();
+  }
+
+  private Value stringValue(String value) {
+    return Value.newBuilder().setStringValue(value).build();
   }
 
   private int getEntryWeight(Matcher matcher) {
     if (matcher.groupCount() < 2 || matcher.group(2) == null) {
       return 1;
     }
-    return Integer.parseInt(matcher.group(2)) - Integer.parseInt(matcher.group(1)) + 1;
+    return parseInt(matcher, 2) - parseInt(matcher, 1) + 1;
+  }
+
+  private int parseInt(Matcher matcher, int group) {
+    return Integer.parseInt(matcher.group(group));
   }
 }
