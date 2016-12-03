@@ -18,12 +18,7 @@
 
 package com.rptools.name;
 
-import com.dzlier.weight.WeightedTrie;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-
-import java.util.Optional;
+import com.dzlier.markov.MarkovChain;
 import java.util.Random;
 
 /**
@@ -34,53 +29,18 @@ import java.util.Random;
  */
 public class Names {
 
-  private final Double standardDeviation;
-  private final Double mean;
-  private final WeightedTrie<String> beg;
-  private final WeightedTrie<String> mid;
-  private final WeightedTrie<String> end;
+  private final MarkovChain<String, String> markovChain;
+  private final Random random = new Random();
 
-  public Names(
-      WeightedTrie<String> beg,
-      WeightedTrie<String> mid,
-      WeightedTrie<String> end,
-      SummaryStatistics stats) {
-    this.beg = beg;
-    this.mid = mid;
-    this.end = end;
-    this.standardDeviation = stats.getStandardDeviation();
-    this.mean = stats.getMean();
+  public Names(MarkovChain<String, String> markovChain) {
+    this.markovChain = markovChain;
+  }
+
+  String makeName(int depth) {
+    return markovChain.generate(depth);
   }
 
   String makeName() {
-    int groups = groups();
-
-    String grandparent = beg.random("");
-    String parent = beg.random("", grandparent);
-    String name = grandparent + parent;
-    if (!parent.equals("")) {
-      groups--;
-    }
-    if (!grandparent.equals("")) {
-      groups--;
-    }
-
-    while (groups-- > 1) {
-      String group = Optional
-          .of(mid.random("", grandparent, parent))
-          .map(StringUtils::stripToNull)
-          .orElse(mid.random("", parent));
-      name += group;
-      grandparent = parent;
-      parent = group;
-    }
-
-    name += end.random("", grandparent, parent);
-
-    return name;
-  }
-
-  public int groups() {
-    return (int) Math.round(new Random().nextGaussian() * standardDeviation + mean);
+    return makeName(random.nextInt(2) + 2);
   }
 }
