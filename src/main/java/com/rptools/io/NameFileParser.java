@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
 @CommonsLog
 public class NameFileParser extends FileParser<Names> {
     private static final Joiner JOINER = Joiner.on("");
-    private static final Pattern groupPat = Pattern.compile("[^QAEIOUY]+|Q?[AEIOUY]+");
+    private static final Pattern groupPat = Pattern.compile("[^AEIOUY]+|[AEIOUY]+");
     private static final Pattern namePat = Pattern.compile("\\w+:\\d+");
 
     @Override
@@ -49,7 +49,10 @@ public class NameFileParser extends FileParser<Names> {
         while (nameMatcher.find()) {
             String[] nameFreq = nameMatcher.group().split(":");
             String name = nameFreq[0];
-            Double weight = Double.valueOf(nameFreq[1]);
+            Double weight = 1.0;
+            if (nameFreq.length > 1) {
+                weight = Double.valueOf(nameFreq[1]);
+            }
             markovChain.process(name, weight);
         }
 

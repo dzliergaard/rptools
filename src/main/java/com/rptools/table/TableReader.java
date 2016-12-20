@@ -8,12 +8,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
+import lombok.extern.apachecommons.CommonsLog;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
+@CommonsLog
 public class TableReader {
 
   private final TableFileParser fileParser;
@@ -25,31 +27,37 @@ public class TableReader {
     this.fileParser = fileParser;
     ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     tables = Optional.ofNullable(classLoader.getResource("/data/tables/"))
-        .map(FileUtils::toFile)
-        .map(this::readTables)
-        .map(tables -> tables.getTablesMap().get("tables"))
-        .orElse(null);
+                     .map(FileUtils::toFile)
+                     .map(this::readTables)
+                     .map(RPTable.Builder::build)
+                     .orElse(null);
   }
 
-  private RPTable readTables(File file) {
+  private RPTable.Builder readTables(File file) {
+    log.fatal("Reading table file " + file.getName());
     if (file.isDirectory()) {
       Collection<File> files = FileUtils
           .listFiles(file, new String[]{"json", "txt"}, false);
       RPTable.Builder tables = RPTable.newBuilder().setName(processName(file));
       files.stream()
-          .sorted((f1, f2) -> f1.getName().compareTo(f2.getName()))
-          .map(File::toPath)
-          .map(fileParser::parseFile)
-          .filter(found -> found != null)
-          .forEach(table -> tables.putTables(table.getName(), table));
+           .sorted((f1, f2) -> f1.getName().compareTo(f2.getName()))
+           .map(File::toPath)
+           .map(fileParser::parseFile)
+           .filter(found -> found != null)
+           .forEach(table -> tables.putTables(table.getName(), table.build()));
       List<File> subdirs = Lists.newArrayList(
           file.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY));
       subdirs.stream()
-          .sorted((d1, d2) -> d1.getName().compareTo(d2.getName()))
-          .filter(dir -> !dir.equals(file))
-          .map(this::readTables)
-          .forEach(table -> tables.putTables(table.getName(), table));
-      return tables.build();
+             .sorted((d1, d2) -> d1.getName().compareTo(d2.getName()))
+             .filter(dir -> !dir.equals(file))
+             .map(this::readTables)
+             .forEach(table -> {
+               if (tables.getTablesMap().containsKey(table.getName())) {
+                 table.mergeFrom(tables.getTablesMap().get(table.getName()));
+               }
+               tables.putTables(table.getName(), table.build());
+             });
+      return tables;
     } else {
       return Optional.of(file.toPath()).map(fileParser::parseFile).orElse(null);
     }
@@ -57,6 +65,6 @@ public class TableReader {
 
   private String processName(File file) {
     return file.getName().replace(".txt", "").replace(".json", "")
-        .replaceAll("^[0-9]*", "");
+               .replaceAll("^[0-9]*", "");
   }
 }

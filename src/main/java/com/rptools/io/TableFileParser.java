@@ -69,10 +69,10 @@ public class TableFileParser {
    * ease adding future tables by pasting their text content instead of trying
    * to convert them to json by hand.
    *
-   * @param file Input table text file.
-   * @return {@link RPTable} created from contents of input file.
+   * @param file Input table text/json file.
+   * @return {@link RPTable.Builder} created from contents of input file.
    */
-  public RPTable parseFile(Path file) {
+  public RPTable.Builder parseFile(Path file) {
     roll = 1;
     try {
       List<String> lines = Files.readAllLines(file);
@@ -80,7 +80,7 @@ public class TableFileParser {
       // We want to keep json files around, and convert text files to json, then delete them.
       if (file.getFileName().toString().endsWith(EXT_JSON)) {
         JsonFormat.parser().merge(JOINER.join(lines), builder);
-        return builder.build();
+        return builder;
       }
       setTableName(file, builder);
 
@@ -92,8 +92,9 @@ public class TableFileParser {
       // only return a table for .txt files if the json file did not also
       // already exist to be read separately
       if (updateResourceFiles(file, builder)) {
-        return builder.build();
+        return builder;
       }
+      log.debug("Not renewing json/text file");
       return null;
     } catch (IOException e) {
       log.error(String.format(PARSE_ERROR, file.toString()), e);
