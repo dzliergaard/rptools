@@ -60,7 +60,7 @@ public class CityGen {
     // add 3 races, or sometimes 2 for low-diversity places
     int people = popBuilder.getPeopleMap().size();
     while (people < 3 || (people < 2 && rand.nextDouble() * .2 < diversity)) {
-      if(addPopulation(popBuilder, size, diversity, randSpecies())) {
+      if (addPopulation(popBuilder, size, diversity, randSpecies())) {
         people++;
       }
     }
@@ -73,11 +73,17 @@ public class CityGen {
   }
 
   private Species randSpecies() {
-    int ind = rand.nextInt(Species.values().length);
-    return Species.values()[ind];
+    Species species = Species.values()[rand.nextInt(Species.values().length)];
+    while (species == Species.UNRECOGNIZED) {
+      species = Species.values()[rand.nextInt(Species.values().length)];
+    }
+    return species;
   }
 
-  private static boolean addPopulation(City.Population.Builder population, Double size, Double diversity, Species species) {
+  private static boolean addPopulation(City.Population.Builder population,
+                                       Double size,
+                                       Double diversity,
+                                       Species species) {
     Map<String, Integer> people = population.getPeopleMap();
     if (people.containsKey(species.name())) {
       return false;
@@ -109,7 +115,8 @@ public class CityGen {
   }
 
   private String generateInn() {
-    String inn = getFrom(cityData.getInns().getBegPatList()) + " " + getFrom(cityData.getInns().getEndPatList());
+    String inn = getFrom(cityData.getInns().getBegPatList()) + " " + getFrom(cityData.getInns()
+                                                                                     .getEndPatList());
     while (inn.matches(".*\\{[^-]\\}.*")) {
       inn = inn.replaceFirst("\\{a\\}", getFrom(cityData.getInns().getBegList()));
       inn = inn.replaceFirst("\\{n\\}", getFrom(cityData.getInns().getEndList()));

@@ -52,7 +52,7 @@ public class TableFileParser {
       .compile("([a-z])([A-Z])");
   private static final Splitter SPLITTER = Splitter.on('\t').omitEmptyStrings();
   private static final Charset UTF_8 = Charset.forName("UTF-8");
-  private static final String PARSE_ERROR = "Error parsing local file %s.";
+  private static final String PARSE_ERROR = "Error parsing local file %s: %s";
   private static final String COL_ROLL = "Roll";
   private static final String COL_WEIGHT = "weight";
   private static final String EXT_TXT = ".txt";
@@ -97,7 +97,7 @@ public class TableFileParser {
       log.debug("Not renewing json/text file");
       return null;
     } catch (IOException e) {
-      log.error(String.format(PARSE_ERROR, file.toString()), e);
+      log.error(String.format(PARSE_ERROR, file.toString(), e.toString()), e);
       return null;
     }
   }

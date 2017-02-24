@@ -5,7 +5,9 @@ import com.rptools.io.TableFileParser;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.apachecommons.CommonsLog;
@@ -40,15 +42,15 @@ public class TableReader {
           .listFiles(file, new String[]{"json", "txt"}, false);
       RPTable.Builder tables = RPTable.newBuilder().setName(processName(file));
       files.stream()
-           .sorted((f1, f2) -> f1.getName().compareTo(f2.getName()))
+           .sorted(Comparator.comparing(File::getName))
            .map(File::toPath)
            .map(fileParser::parseFile)
-           .filter(found -> found != null)
+           .filter(Objects::nonNull)
            .forEach(table -> tables.putTables(table.getName(), table.build()));
       List<File> subdirs = Lists.newArrayList(
           file.listFiles((FileFilter) DirectoryFileFilter.DIRECTORY));
       subdirs.stream()
-             .sorted((d1, d2) -> d1.getName().compareTo(d2.getName()))
+             .sorted(Comparator.comparing(File::getName))
              .filter(dir -> !dir.equals(file))
              .map(this::readTables)
              .forEach(table -> {

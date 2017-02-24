@@ -41,4 +41,5 @@ message RPTable {
   int32 maxRoll = 3;
   string name = 4;
   map<string,RPTable> tables = 5;
+  bool noGen = 6;
 }
