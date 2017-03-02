@@ -21,11 +21,9 @@ package com.rptools.io;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Struct;
-import com.google.protobuf.Value;
 import com.google.protobuf.util.JsonFormat;
 import com.rptools.table.RPTable;
+import com.rptools.table.RPTable.Entry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -38,8 +36,8 @@ import lombok.extern.apachecommons.CommonsLog;
 import org.springframework.stereotype.Component;
 
 /**
- * Parses text files representing random tables from the DMG into {@code
- * RPTable} objects. See {@code RPTable} for expected table file format.
+ * Parses text files representing random tables from the DMG into {@link
+ * RPTable} objects. See {@link RPTable} for expected table file format.
  */
 @Component
 @CommonsLog
@@ -53,8 +51,6 @@ public class TableFileParser {
   private static final Splitter SPLITTER = Splitter.on('\t').omitEmptyStrings();
   private static final Charset UTF_8 = Charset.forName("UTF-8");
   private static final String PARSE_ERROR = "Error parsing local file %s: %s";
-  private static final String COL_ROLL = "Roll";
-  private static final String COL_WEIGHT = "weight";
   private static final String EXT_TXT = ".txt";
   private static final String EXT_JSON = ".json";
 
@@ -107,8 +103,7 @@ public class TableFileParser {
    *
    * @param file Path to file
    * @param builder RPTable builder to print to JSON file
-   * @return Boolean: If the .json file already existed and will be parsed
-   * separately
+   * @return Boolean: If the .json file already existed and will be parsed separately
    */
   private boolean updateResourceFiles(Path file, RPTable.Builder builder)
       throws IOException {
@@ -116,81 +111,40 @@ public class TableFileParser {
     Files.delete(file);
     boolean isNew = json.createNewFile();
     Files.write(json.toPath(),
-        Lists.newArrayList(JsonFormat.printer().print(builder)), UTF_8);
+                Lists.newArrayList(JsonFormat.printer().print(builder)), UTF_8);
     return isNew;
   }
 
   private void setTableName(Path file, RPTable.Builder builder) {
     String filename = file.getFileName().toString().replace(EXT_TXT, "")
-        .replaceAll("^[0-9]*", "");
+                          .replaceAll("^[0-9]*", "");
     Matcher wordBreak = WORD_BREAK_PATTERN.matcher(filename);
     while (wordBreak.find()) {
       filename = filename.replace(wordBreak.group(0),
-          wordBreak.group(1) + " " + wordBreak.group(2));
+                                  wordBreak.group(1) + " " + wordBreak.group(2));
     }
     builder.setName(filename);
   }
 
   private void parseLine(RPTable.Builder builder, List<String> columns,
-      String line) {
+                         String line) {
     if (line.isEmpty()) {
       return;
     }
     List<String> values = Lists.newArrayList(SPLITTER.splitToList(line));
-    try {
-      Matcher matcher = ROLL_PATTERN.matcher(values.get(0));
-      Struct.Builder entryBuilder = builder.addEntriesBuilder();
-      int weight = 1;
-      if (matcher.matches()) {
-        weight = getEntryWeight(matcher);
-        entryBuilder.putFields(COL_ROLL, buildField(values.remove(0)));
-      } else {
-        entryBuilder.putFields(COL_ROLL, numberValue(roll));
-      }
-      entryBuilder.putFields(COL_WEIGHT, numberValue(weight));
-      roll += weight;
-      builder.setMaxRoll(roll);
-      columns.forEach(
-          col -> entryBuilder.putFields(col, buildField(values.remove(0))));
-    } catch (IndexOutOfBoundsException e) {
-      log.error("Exception processing line: " + line, e);
+    Matcher matcher = ROLL_PATTERN.matcher(values.get(0));
+    Entry.Builder entryBuilder = Entry.newBuilder();
+    int weight = 1;
+    if (matcher.matches()) {
+      weight = getEntryWeight(matcher);
+      entryBuilder.setRoll(values.remove(0));
+    } else {
+      entryBuilder.setRoll("" + roll);
     }
-  }
-
-  /**
-   * First tries parsing the value as though it were a table-redirect-type
-   * Struct. Otherwise, defaults to the normal value types int -> string.
-   */
-  private Value buildField(String value) {
-    try {
-      Struct.Builder entryStructBuilder = Struct.newBuilder();
-      JsonFormat.parser().merge(value, entryStructBuilder);
-      return structValue(entryStructBuilder);
-    } catch (InvalidProtocolBufferException e) {
-      return numOrStringValue(value);
-    }
-  }
-
-  private Value structValue(Struct.Builder structBuilder) {
-    return Value.newBuilder().setStructValue(structBuilder).build();
-  }
-
-  // First tries to create a number value, defaults to string value if
-  // string is not valid number format
-  private Value numOrStringValue(String value) {
-    try {
-      return numberValue(Integer.parseInt(value));
-    } catch (NumberFormatException nfe) {
-      return stringValue(value);
-    }
-  }
-
-  private Value numberValue(Integer number) {
-    return Value.newBuilder().setNumberValue(number).build();
-  }
-
-  private Value stringValue(String value) {
-    return Value.newBuilder().setStringValue(value).build();
+    entryBuilder.setWeight(weight);
+    roll += weight;
+    builder.setMaxRoll(roll);
+    entryBuilder.addAllValues(values);
   }
 
   private int getEntryWeight(Matcher matcher) {

@@ -35,9 +35,20 @@ option java_multiple_files = true;
  *   int32 num_rolls
  */
 message RPTable {
-  repeated string columns = 1;
+  message Entry {
+    int32 weight = 1;
+    string roll = 2;
+    repeated string values = 3;
 
-  repeated google.protobuf.Struct entries = 2;
+    message Redirect {
+      string table_path = 1;
+      int32 numRolls = 2;
+    }
+    Redirect redirect = 4;
+  }
+
+  repeated string columns = 1;
+  repeated Entry entries = 2;
   int32 maxRoll = 3;
   string name = 4;
   map<string,RPTable> tables = 5;
